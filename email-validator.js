@@ -1,7 +1,7 @@
 // First, we'll create an input to ask the user to choose a table that contains the email address field requiring validation
 // We'll assign the response to a variable called table so we can reference later. We'll also use await so the script knows
 // to wait for the user's input before continuing on.
-let table = await input.tableAsync("Please select the table with the field you want to validate.");
+let table = await input.tableAsync('Please select the table with the field you want to validate.');
 
 // Next, we need to do the same thing but ask for the field requiring validation. We'll supply the table the user selected
 // in the previous step so the script knows where to find the field.
@@ -48,16 +48,16 @@ for (let record of queryResult.records) {
     // That's not going to be 100% clear to the user so we should check this result and display it in a readable format (emojis).
     let resultText;
     if (validation === null) {
-        resultText = "❌";
+        resultText = '❌';
     } else {
-        resultText = "✅";
+        resultText = '✅';
     }
 
     // Let's store all of that information in an object so we can use it to make a nice table for the user.
     let result = {
         Record: name,
-        "Cell value": cellValue,
-        "Valid?": resultText
+        'Cell value': cellValue,
+        'Valid?': resultText
     };
     // Now we'll push the result object into the array we created earlier while the loop continues to look at other records.
     results.push(result);

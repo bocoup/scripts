@@ -10,14 +10,16 @@ if (clientOrdersRecord) {
     let furnitureRecord = await input.recordAsync('Pick a furniture item', furnitureTable);
     if (furnitureRecord) {
         let quantity = parseInt(await input.textAsync('Enter the quantity'), 10);
-        let recordId = await lineItemsTable.createRecordAsync({
-            'Belongs to order': [{ id: clientOrdersRecord.id }],
-            'Furniture item': [{ id: furnitureRecord.id }],
-            'Quantity': quantity
+        let lineItemRecordId = await lineItemsTable.createRecordAsync({
+            'Belongs to order': [{id: clientOrdersRecord.id}],
+            'Furniture item': [{id: furnitureRecord.id}],
+            Quantity: quantity
         });
-        let allRecords = await lineItemsTable.selectRecordsAsync();
-        let record = allRecords.records.find(record => record.id === recordId);
-        output.markdown(`Added new line item: **${record.getCellValueAsString('Name')}**`);
+        let lineItemsQuery = await lineItemsTable.selectRecordsAsync();
+        let lineItemRecord = lineItemsQuery.records.find(
+            (record) => record.id === lineItemRecordId
+        );
+        output.markdown(`Added new line item: **${lineItemRecord.getCellValueAsString('Name')}**`);
     } else {
         output.markdown('No item picked');
     }

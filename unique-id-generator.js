@@ -17,14 +17,14 @@ function hashString(string) {
 
 // First, we'll create an input to ask the user to choose a table that contains the field that will store the unique ID this
 // script will generate.  We'll save it in a variable called table for later use.
-let table = await input.tableAsync("Please select a table.");
+let table = await input.tableAsync('Please select a table.');
 
 // Next, we need to do the same thing but ask for the field the user wants to store the generated unique IDs in.
 // We'll supply the table the user selected in the previous step so the script knows which fields to display to the user.
-const idField = await input.fieldAsync("Please select the field for the unique IDs.", table);
+const idField = await input.fieldAsync('Please select the field for the unique IDs.', table);
 
 // Now we'll ask for one more field from the user to allow them to select the data to generate the IDs from.
-const sourceField = await input.fieldAsync("Please select the field with the source data", table);
+const sourceField = await input.fieldAsync('Please select the field with the source data', table);
 
 // We have everything we need from the user and now we can grab the records from the chosen table by calling the
 // selectRecordsAsync method. We only need the cell values in the two fields selected by the user, so we'll specify
@@ -39,11 +39,11 @@ let updates = [];
 // Now we can loop through the records and generate the the unique ids. Using the hash function we defined earlier,
 // we can generate unique IDs. One caveat: if two records have the same cell value in the source field, this method
 // will generate duplicate IDs. If that's a problem, you can always use Math.random() to append a random number as well.
-for (let record of records) {
+for (let record of queryResult.records) {
     // We'll generate a unique numeric ID by hashing the record ID and source data, and then concatenating (combining)
     // the two values. We'll store it as an object in a format that we can use to update records.
     let cellValue = record.getCellValueAsString(sourceField);
-    let uniqueId = hashString(recordId).toString() + hashString(cellValue).toString();
+    let uniqueId = hashString(record.id).toString() + hashString(cellValue).toString();
     let update = {
         id: record.id,
         fields: {

@@ -1,10 +1,12 @@
 // For https://airtable.com/templates/product-design-and-ux/expOzMycWirMsUOTL/bug-tracker
 function formatUnique(assignees) {
-    return Array.from(new Set(assignees)).map(assignee => assignee.name).join(', ');
+    return Array.from(new Set(assignees))
+        .map((assignee) => assignee.name)
+        .join(', ');
 }
 
 function formatList(bugNames) {
-    return bugNames.map(bugName => `- ${bugName}`).join('\n');
+    return bugNames.map((bugName) => `- ${bugName}`).join('\n');
 }
 
 function formatSection(label, bugNames, assignees, features) {
@@ -50,10 +52,12 @@ function printReport(records) {
                 case 'In progress':
                     openBugs++;
                     break;
+                default:
+                    break;
             }
         } else {
             openBugs++;
-            untriagedBugNames.push(record.name + ` (**${daysOld}** days)`);
+            untriagedBugNames.push(`${record.name} (**${daysOld}** days)`);
         }
 
         let priority = record.getCellValue('Priority');
@@ -67,6 +71,8 @@ function printReport(records) {
                     criticalFeatures.push(...features);
                 }
                 break;
+            default:
+                break;
         }
     }
 
@@ -75,7 +81,8 @@ function printReport(records) {
 ${formatSection('🚨 Critical', criticalBugNames, criticalAssignees, criticalFeatures)}
 ${formatSection('⏱ Blocked', blockedBugNames, blockedAssignees)}
 ${formatSection('🧹 Untriaged', untriagedBugNames)}
-`);
+`
+    );
 }
 
 let table = base.getTable('Bugs and issues');

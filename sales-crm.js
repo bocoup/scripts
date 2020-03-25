@@ -1,9 +1,9 @@
 // For https://airtable.com/templates/sales-and-customers/expvjTzYAZareV1pt/sales-crm
 function formatList(items) {
-    if (items.length == 1) {
+    if (items.length === 1) {
         return items[0];
     }
-    return items.slice(0, -1).join(', ') + ' and ' + items[items.length - 1];
+    return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
 }
 
 async function validateFields(tableName, fieldNames) {
@@ -23,9 +23,11 @@ async function validateFields(tableName, fieldNames) {
     }
 
     if (missingFieldsByRecord.size) {
-        output.markdown(`### ｘ \`${missingFieldsByRecord.size}\` records in **${tableName}** are incomplete:`);
+        output.markdown(
+            `### ｘ \`${missingFieldsByRecord.size}\` records in **${tableName}** are incomplete:`
+        );
         missingFieldsByRecord.forEach((missingFields, record) => {
-            let missingFieldsList = formatList(missingFields.map(name => `\`${name}\``));
+            let missingFieldsList = formatList(missingFields.map((name) => `\`${name}\``));
             output.markdown(`- **${record.name}** is missing ${missingFieldsList}`);
         });
     } else {
