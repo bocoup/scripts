@@ -23,66 +23,58 @@ let destinationFieldNames = ['Thing 1', 'Thing 2', 'Thing 3'];
 // You shouldn't need to modify the code following this line to use this
 // script.
 
-async function main() {
-    if (typeof tableName !== 'string') {
-        throw new Error('The `tableName` variable must be a string.');
-    }
-    if (typeof sourceFieldName !== 'string') {
-        throw new Error('The `sourceFieldName` variable must be a string.');
-    }
-    if (!Array.isArray(destinationFieldNames)) {
-        throw new Error('The `destinationFieldNames` variable must be an array.');
-    }
-    if (!destinationFieldNames.length) {
-        throw new Error('The `destinationFieldNames` array must have at least one element.');
-    }
-    if (!destinationFieldNames.every((name) => typeof name === 'string')) {
-        throw new Error('Every element in the `destinationFieldNames` array must be a string.');
-    }
-
-    let table = base.getTable(tableName);
-    let query = await table.selectRecordsAsync();
-
-    for (let record of query.records) {
-        let values = (record.getCellValueAsString(sourceFieldName) || '').split(/\s+/);
-
-        if (values.length > destinationFieldNames.length) {
-            output.markdown(
-                `**WARNING**: encountered ${values.length} values, but only ` +
-                    `${destinationFieldNames.length} destination fields are available. ` +
-                    `(values: ${values})`
-            );
-
-            // Remove the extraneous values from the array
-            values.length = destinationFieldNames.length;
-        }
-
-        // Create an object suitable for use in `updateRecordAsync`. Its keys
-        // are the names of the "destination" fields as specified at the
-        // beginning of this scripts, and its values are the corresponding
-        // values from the "source" field.
-        //
-        // For example, given a "source" field with the text "foo bar" and a
-        // set of "destination" fields named "first", "second", and "third",
-        // `toUpdate` will be the following JavaScript object:
-        //
-        //     {
-        //       "first": "foo",
-        //       "second": "bar",
-        //       "third": ""
-        //     }
-        let fields = {};
-        for (let i = 0; i < destinationFieldNames.length; i++) {
-            let fieldName = destinationFieldNames[i];
-            fields[fieldName] = values[i];
-        }
-
-        await table.updateRecordAsync(record, fields);
-    }
+if (typeof tableName !== 'string') {
+    throw new Error('The `tableName` variable must be a string.');
+}
+if (typeof sourceFieldName !== 'string') {
+    throw new Error('The `sourceFieldName` variable must be a string.');
+}
+if (!Array.isArray(destinationFieldNames)) {
+    throw new Error('The `destinationFieldNames` variable must be an array.');
+}
+if (!destinationFieldNames.length) {
+    throw new Error('The `destinationFieldNames` array must have at least one element.');
+}
+if (!destinationFieldNames.every((name) => typeof name === 'string')) {
+    throw new Error('Every element in the `destinationFieldNames` array must be a string.');
 }
 
-try {
-    await main();
-} catch (error) {
-    output.markdown(`**ERROR**: ${error}`);
+let table = base.getTable(tableName);
+let query = await table.selectRecordsAsync();
+
+for (let record of query.records) {
+    let values = (record.getCellValueAsString(sourceFieldName) || '').split(/\s+/);
+
+    if (values.length > destinationFieldNames.length) {
+        output.markdown(
+            `**WARNING**: encountered ${values.length} values, but only ` +
+                `${destinationFieldNames.length} destination fields are available. ` +
+                `(values: ${values})`
+        );
+
+        // Remove the extraneous values from the array
+        values.length = destinationFieldNames.length;
+    }
+
+    // Create an object suitable for use in `updateRecordAsync`. Its keys
+    // are the names of the "destination" fields as specified at the
+    // beginning of this scripts, and its values are the corresponding
+    // values from the "source" field.
+    //
+    // For example, given a "source" field with the text "foo bar" and a
+    // set of "destination" fields named "first", "second", and "third",
+    // `toUpdate` will be the following JavaScript object:
+    //
+    //     {
+    //       "first": "foo",
+    //       "second": "bar",
+    //       "third": ""
+    //     }
+    let fields = {};
+    for (let i = 0; i < destinationFieldNames.length; i++) {
+        let fieldName = destinationFieldNames[i];
+        fields[fieldName] = values[i];
+    }
+
+    await table.updateRecordAsync(record, fields);
 }
