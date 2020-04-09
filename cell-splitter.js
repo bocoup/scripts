@@ -41,6 +41,7 @@ if (!destinationFieldNames.every((name) => typeof name === 'string')) {
 
 let table = base.getTable(tableName);
 let query = await table.selectRecordsAsync();
+let updates = [];
 
 for (let record of query.records) {
     let values = (record.getCellValueAsString(sourceFieldName) || '').split(/\s+/);
@@ -76,5 +77,13 @@ for (let record of query.records) {
         fields[fieldName] = values[i];
     }
 
-    await table.updateRecordAsync(record, fields);
+    updates.push({id: record.id, fields});
+}
+
+// Updating records in batches is more efficient than updating one record at a
+// time.
+let maxRecordsPerCall = 50;
+while (updates.length > 0) {
+    await table.updateRecordsAsync(updates.slice(0, maxRecordsPerCall));
+    updates = updates.slice(maxRecordsPerCall);
 }
