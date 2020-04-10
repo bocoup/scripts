@@ -64,7 +64,7 @@ for (let record of query.records) {
     //
     // For example, given a "source" field with the text "foo bar" and a
     // set of "destination" fields named "first", "second", and "third",
-    // `toUpdate` will be the following JavaScript object:
+    // `fields` will be the following JavaScript object:
     //
     //     {
     //       "first": "foo",
