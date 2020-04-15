@@ -1,225 +1,180 @@
 /**
- * Company and Logo with Clearbit Script
+ * Fill in company websites and logos script
  *
  * With a text field with names of companies, for records that have an empty
  * company website field or an empty company logo field, this will request
  * suggestions from Clearbit's Autocomplete API to fill the website or logo
  * fields.
  *
- * How to use with your Airtable Base
+ * https://clearbit.com/docs#autocomplete-api
+ *
+ * How to use with your Airtable base
  *
  * 1. Set the tableName variable to the table you want it to check.
  * 2. Update the keys in the fieldMap variable to names of fields in the table
- *    that are a single line of text or attachment field. You do not need to
+ *    that are single line text or attachment fields. You do not need to
  *    change the values. The values are the properties in the responses this
  *    gets from the Clearbit API. The domain and logo properties are optional.
  *    You can use one by commenting out the other. Or you can use both. Name,
  *    though, is required and cannot be commented out.
  */
 
-const tableName = 'Companies';
+let tableName = 'Clients';
 // A map of Airtable field name keys to Clearbit Autocomplete API response
 // properties.
-const fieldMap = {
-    // The name 
-    'Company Name': 'name',
-    'Company Website': 'domain',
-    'Company Image Attachments': 'logo',
+let fieldMap = {
+    // A single line text field
+    'Name': 'name',
+    // A single line text field
+    'Website': 'domain',
+    // An attachments field
+    'Attachments': 'logo',
 };
 
-// After this line is the script logic. To use this script as is you do not need
-// to edit anything behind this point.
-
-await main({tableName, fieldMap});
+// After this line is the script logic. To use this script as-is, you do not need
+// to edit anything after this point.
 
 function fieldForParam(fieldMap, param) {
-    for (const key in fieldMap) {
-        const value = fieldMap[key];
-        if (value === param) {
-            return key;
+    for (let fieldName in fieldMap) {
+        let clearbitProperty = fieldMap[fieldName];
+        if (clearbitProperty === param) {
+            return fieldName;
         }
     }
     return null;
 }
 
-function basename(path) {
-    const index = path.lastIndexOf('/');
-    return path.substring(index + 1);
+// True when given an attachment field with at least one attachement.
+function includesAttachment(cell) {
+    return cell && cell.length > 0;
 }
 
-function renderer(state) {
-    const header = `# Fill in Company Websites and Logos
+let progressHeader = `# Fill in company websites and logos
 
 [Logos provided by Clearbit](https://clearbit.com)
 
 `;
-    const footer = ``;
-    let lastRender = 0;
 
-    return async function render(stage) {
-        if (stage !== 'done' && Date.now() - lastRender < 500) {
-            return;
-        }
-        lastRender = Date.now();
+let lastRender = 0;
 
-        let includeStageSummary = false;
-        let body = '';
-        if (stage === 'done') {
-            body = `Found suggestions for ${state.totalSuggested} out of ${state.recordNames.length} records.  
-${body}`;
-            includeStageSummary = true;
-        }
-        if (includeStageSummary) {
-            body = `Fetched info for ${state.recordNames.length} records.  
-${body}`;
-        }
-        if (stage === 'suggesting') {
-            body = `Fetching suggestion for "${state.recordNames[state.recordIndex]}" (${state.recordIndex + 1} of ${state.recordNames.length}) from [Clearbit].  
-${body}`;
-            includeStageSummary = true;
-        }
-        if (includeStageSummary) {
-            body = `Filtered ${state.totalSelected} records down to ${state.recordNames.length} records.  
-${body}`;
-        }
-        if (stage === 'filtering records') {
-            body = `Filtering ${state.totalSelected} records from "${state.tableName}" ...  
-${body}`;
-        }
-        if (stage === 'selecting records') {
-            body = `Selecting records from "${state.tableName}" ...  
-${body}`;
-        }
+async function renderProgress(stage, body) {
+    // Throttle renders to 2 times a second or the last stage.
+    if (stage !== 'done' && Date.now() - lastRender < 500) {
+        return;
+    }
+    lastRender = Date.now();
 
-        body = header + body + footer;
-
-        await output.clear();
-        await output.markdown(body);
-    };
+    await output.clear();
+    await output.markdown(progressHeader + body);
 }
 
-function includesClearbitLogo(cell, clearbitUrl) {
-    if (!cell) {
-        return false;
+let nameFieldName = fieldForParam(fieldMap, 'name');
+let websiteFieldName = fieldForParam(fieldMap, 'domain');
+let logoFieldName = fieldForParam(fieldMap, 'logo');
+
+let fieldNames = Object.keys(fieldMap); 
+
+let table = base.getTable(tableName);
+
+let recordNames = null;
+let totalSelected = 0;
+let totalFiltered = 0;
+let totalSuggested = 0;
+
+await renderProgress(
+    'selecting records',
+    `Selecting records from "${tableName}" ...  
+`,
+);
+
+let allRecords = await table.selectRecordsAsync({
+    fields: fieldNames,
+});
+
+totalSelected = allRecords.records.length;
+
+await renderProgress(
+    'filtering records',
+    `Filtering ${totalSelected} records from "${tableName}" ...  
+`,
+);
+
+let records = allRecords.records.filter(record => (
+    // A record must have its name field set.
+    record.getCellValue(nameFieldName) &&
+    (
+        // If searching for website domains, the website field must be empty.
+        (
+            websiteFieldName && !record.getCellValue(websiteFieldName) ||
+            !websiteFieldName
+        ) ||
+        // If searching for logo domains, the logo field must be empty.
+        (
+            logoFieldName && !includesAttachment(record.getCellValue(logoFieldName)) ||
+            !logoFieldName
+        )
+    )
+));
+
+totalFiltered = records.length;
+
+recordNames = records.map(record => record.getCellValue(nameFieldName));
+
+// Create a list of record updates. After all the updates are in the list we'll
+// submit them in batches to the table.
+let updates = [];
+
+for (let i = 0; i < records.length; i++) {
+    let record = records[i];
+
+    await renderProgress(
+        'suggesting',
+        `Filtered ${totalSelected} records down to ${totalFiltered} records.  
+Fetching suggestion for "${recordNames[i]}" (${i + 1} of ${totalFiltered}) from [Clearbit].  
+`,
+    );
+
+    // Request info for records one at a time. Clearbit has a request limit.
+    let response = await fetch(`https://autocomplete.clearbit.com/v1/companies/suggest?query=${records[i].getCellValue(nameFieldName)}`);
+    let clearbitSuggestions = await response.json();
+    // Clearbit may have multiple likely matches for some names. 
+    let clearbitSuggestion = clearbitSuggestions[0];
+
+    // Clearbit may not have info matching a input name.
+    if (!clearbitSuggestion) continue;
+
+    totalSuggested += 1;
+
+    let fields = {};
+    // Update the website domain field if it is empty in the table.
+    if (websiteFieldName && !record.getCellValue(websiteFieldName)) {
+        fields[websiteFieldName] = clearbitSuggestion.domain;
     }
-    const filename = basename(clearbitUrl);
-    for (let i = 0; i < cell.length; i++) {
-        if (cell[i].filename === filename) {
-            return true;
-        }
+    // Update the logo field if it is empty in the table.
+    if (logoFieldName && !includesAttachment(record.getCellValue(logoFieldName))) {
+        fields[logoFieldName] = [{
+            url: clearbitSuggestion.logo,
+        }];
     }
-    return false;
-}
 
-async function main({tableName, fieldMap}) {
-    const nameField = fieldForParam(fieldMap, 'name');
-    const fields = Object.keys(fieldMap); 
+    if (Object.keys(fields).length === 0) continue;
 
-    const targetTable = base.getTable(tableName);
-
-    const progressState = {
-        tableName,
-        recordNames: null,
-        recordIndex: -1,
-        totalSelected: 0,
-        totalSuggested: 0,
-    };
-    const render = renderer(progressState);
-    await render('selecting records');
-
-    const currentRecords = await targetTable.selectRecordsAsync({
+    updates.push({
+        id: record.id,
         fields,
     });
-
-    progressState.totalSelected = currentRecords.records.length;
-
-    let targetRecords;
-
-    await render('filtering records');
-
-    targetRecords = currentRecords.records.filter(record => {
-        for (const key in fieldMap) {
-            const cell = record.getCellValue(key);
-            const tableField = targetTable.getField(key);
-
-            let value;
-            if (tableField.type === 'singleLineText') {
-                value = cell;
-            } else if (tableField.type === 'multipleAttachments') {
-                value = (cell && cell.length > 0) ? cell[0].url : null;
-            }
-
-            if (!value) return true;
-        }
-    });
-
-    progressState.recordNames = targetRecords.map(record => record.getCellValue(nameField));
-
-    for (let i = 0; i < targetRecords.length; i++) {
-        const record = targetRecords[i];
-
-        progressState.recordIndex = i;
-        await render('suggesting');
-
-        const response = await fetch(`https://autocomplete.clearbit.com/v1/companies/suggest?query=${targetRecords[i].getCellValue(nameField)}`);
-        const clearbitSuggestions = await response.json(); 
-        const clearbitSuggestion = clearbitSuggestions[0];
-
-        if (!clearbitSuggestion) continue;
-
-        progressState.totalSuggested += 1;
-
-        const value = {};
-        for (const key in fieldMap) {
-            const field = fieldMap[key];
-            const suggestion = clearbitSuggestion[field];
-            const cell = record.getCellValue(key);
-            const tableField = targetTable.getField(key);
-
-            if (tableField.type === 'singleLineText' && !cell) {
-                value[key] = suggestion;
-            } else if (
-                tableField.type === 'multipleAttachments' &&
-                !includesClearbitLogo(cell, suggestion)
-            ) {
-                value[key] = [...(cell || []), {
-                    url: suggestion,
-                    filename: basename(suggestion),
-                }];
-            }
-        }
-
-        if (Object.keys(value).length === 0) continue;
-
-        await targetTable.updateRecordAsync(record.id, value);
-    }
-
-    await render('done');
 }
 
-/**
- * Quality assurance testing plan
- *
- * 1. Create a table named "Logo QA" and set to have 2 single line text fields
- *    named "Name" and "Website", and 1 attachments field named "Attachments".
- * 2. Set 3 records with the "Name" field set to "github", "nodejs", and "airtable".
- * 3. Install a Script block.
- * 4. Copy the script into the block's code editor editor.
- * 5. Set the variable "tableName" to `"Logo QA"`.
- * 6. Set the variable "fieldMap" to look like:
- *
- *    const fieldMap = {
- *        'Name': 'name',
- *        'Website': 'domain',
- *        'Attachments': 'logo',
- *    };
- *
- * 7. Run the script.
- *
- * Expected: Each record has a url in the "Website" field and a logo in the "Attachments" field.
- *
- * 8. Delete the urls in the Website field.
- * 9. Run the script.
- *
- * Expected: Each record has a url in the "Website" field again and still one logo in the "Attachments" field.
- */
+let updateLimit = 50;
+
+for (let i = 0; i < updates.length; i += updateLimit) {
+    await table.updateRecordsAsync(updates.slice(i, i + updateLimit));
+}
+
+await renderProgress(
+    'done',
+    `Filtered ${totalSelected} records down to ${totalFiltered} records.  
+Fetched info for ${totalFiltered} records.  
+Found suggestions for ${totalSuggested} out of ${totalFiltered} records.  
+`,
+);
