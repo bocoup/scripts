@@ -69,7 +69,7 @@ async function renderProgress(stage, body) {
 }
 
 let nameFieldName = fieldForParam(fieldMap, 'name');
-let websiteFieldName = fieldForParam(fieldMap, 'domain');
+let domainFieldName = fieldForParam(fieldMap, 'domain');
 let logoFieldName = fieldForParam(fieldMap, 'logo');
 
 let fieldNames = Object.keys(fieldMap); 
@@ -103,10 +103,10 @@ let records = allRecords.records.filter(record => (
     // A record must have its name field set.
     record.getCellValue(nameFieldName) &&
     (
-        // If searching for website domains, the website field must be empty.
+        // If searching for domains, the domain field must be empty.
         (
-            websiteFieldName && !record.getCellValue(websiteFieldName) ||
-            !websiteFieldName
+            domainFieldName && !record.getCellValue(domainFieldName) ||
+            !domainFieldName
         ) ||
         // If searching for logo domains, the logo field must be empty.
         (
@@ -146,9 +146,9 @@ Fetching suggestion for "${recordNames[i]}" (${i + 1} of ${totalFiltered}) from 
     totalSuggested += 1;
 
     let fields = {};
-    // Update the website domain field if it is empty in the table.
-    if (websiteFieldName && !record.getCellValue(websiteFieldName)) {
-        fields[websiteFieldName] = clearbitSuggestion.domain;
+    // Update the domain field if it is empty in the table.
+    if (domainFieldName && !record.getCellValue(domainFieldName)) {
+        fields[domainFieldName] = clearbitSuggestion.domain;
     }
     // Update the logo field if it is empty in the table.
     if (logoFieldName && !includesAttachment(record.getCellValue(logoFieldName))) {
