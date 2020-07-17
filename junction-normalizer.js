@@ -42,11 +42,11 @@
  * to streamline the script's startup.
  */
 const hardCoded = {
-    firstTableName: 'Table 1',
-    secondTableName: 'Table 2',
-    junctionTableName: 'Table 3',
-    firstJunctionFieldName: 'To 1',
-    secondJunctionFieldName: 'To 2'
+    firstForeignTableName: '',
+    secondForeignTableName: '',
+    junctionTableName: '',
+    firstJunctionFieldName: '',
+    secondJunctionFieldName: ''
 };
 
 /**
@@ -59,11 +59,11 @@ let toDelete = [];
 // Airtable limits batch operations to 50 records or fewer.
 const maxRecordsPerCall = 50;
 
-const table1 = hardCoded.firstTableName
-    ? base.getTable(hardCoded.firstTableName)
+const table1 = hardCoded.firstForeignTableName
+    ? base.getTable(hardCoded.firstForeignTableName)
     : await input.tableAsync('First table name');
-const table2 = hardCoded.secondTableName
-    ? base.getTable(hardCoded.secondTableName)
+const table2 = hardCoded.secondForeignTableName
+    ? base.getTable(hardCoded.secondForeignTableName)
     : await input.tableAsync('Second table name');
 const table3 = hardCoded.junctionTableName
     ? base.getTable(hardCoded.junctionTableName)
@@ -93,7 +93,7 @@ for (let record3 of query3.records) {
     let records2 = record3.getCellValue(secondJunctionField);
 
     // Either field in the junction table may have zero records. That's not
-    // expected, so junction records like like that should be removed.
+    // expected, so junction records like that should be removed.
     if (!records1 || !records2) {
         toDelete.push(record3);
         continue;
